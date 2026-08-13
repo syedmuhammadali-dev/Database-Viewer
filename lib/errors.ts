@@ -51,6 +51,13 @@ export class ExportError extends AppError {
   }
 }
 
+export class DriveError extends AppError {
+  constructor(message: string) {
+    super(message, "DriveError");
+    this.name = "DriveError";
+  }
+}
+
 export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }

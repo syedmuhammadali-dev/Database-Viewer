@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import Dropzone from "./dropzone";
+import GoogleDriveLink from "./drive-link";
 import type { ParsedDataset } from "@/lib/types";
 import {
   detectFileKind,
@@ -184,6 +185,16 @@ export default function ImportDialog({
     [runBatch],
   );
 
+  const handleDriveFile = useCallback(
+    (file: File) => {
+      if (busyRef.current) return;
+      const next = [newItem(file)];
+      setItems((prev) => [...prev, ...next]);
+      void runBatch(next);
+    },
+    [runBatch],
+  );
+
   const reset = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -275,6 +286,12 @@ export default function ImportDialog({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
+          <GoogleDriveLink onFile={handleDriveFile} disabled={isBusy} />
+          <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-zinc-600">
+            <span className="h-px flex-1 bg-zinc-800" />
+            or
+            <span className="h-px flex-1 bg-zinc-800" />
+          </div>
           {items.length === 0 && excelItems.length === 0 ? (
             <div className="space-y-4">
               <Dropzone onFiles={onFiles} />
