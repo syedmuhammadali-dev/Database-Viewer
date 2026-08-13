@@ -8,6 +8,7 @@ import {
   Terminal,
 } from "lucide-react";
 import type { ParsedDataset, TableInfo, ViewMode } from "@/lib/types";
+import DataTable from "@/components/table/data-table";
 
 type MainAreaProps = {
   tables: TableInfo[];
@@ -73,9 +74,40 @@ export default function MainArea({
             {activeTable.columns.length} columns
           </span>
         </div>
-        <PanePlaceholder viewMode={viewMode} activeDataset={activeDataset} />
+        <Pane viewMode={viewMode} activeDataset={activeDataset} />
       </div>
     </main>
+  );
+}
+
+function Pane({
+  viewMode,
+  activeDataset,
+}: {
+  viewMode: ViewMode;
+  activeDataset: ParsedDataset | null;
+}) {
+  if (viewMode === "table" && activeDataset) {
+    return (
+      <DataTable columns={activeDataset.columns} rows={activeDataset.rows} />
+    );
+  }
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-zinc-500">
+      <FileJson className="h-4 w-4 text-zinc-600" aria-hidden />
+      <p>
+        {viewMode === "json"
+          ? "JSON view will display the raw records here."
+          : viewMode === "sql"
+            ? "SQL editor will let you query this table here."
+            : "Select a table to view its rows."}
+      </p>
+      {activeDataset ? (
+        <p className="text-xs text-zinc-600">
+          {activeDataset.rows.length.toLocaleString()} rows ready.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -139,34 +171,6 @@ function EmptyState() {
           Upload a CSV, Excel or JSON file, or import data from Google Drive.
         </p>
       </div>
-      <div className="text-xs text-zinc-600">
-        For now, the workspace shell is ready — importing lands next.
-      </div>
-    </div>
-  );
-}
-
-function PanePlaceholder({
-  viewMode,
-  activeDataset,
-}: {
-  viewMode: ViewMode;
-  activeDataset: ParsedDataset | null;
-}) {
-  const copy: Record<ViewMode, string> = {
-    table: "Table view will render your rows here.",
-    json: "JSON view will display the raw records here.",
-    sql: "SQL editor will let you query this table here.",
-  };
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-zinc-500">
-      <FileJson className="h-4 w-4 text-zinc-600" aria-hidden />
-      <p>{copy[viewMode]}</p>
-      {activeDataset ? (
-        <p className="text-xs text-zinc-600">
-          {activeDataset.rows.length.toLocaleString()} parsed rows ready.
-        </p>
-      ) : null}
     </div>
   );
 }
