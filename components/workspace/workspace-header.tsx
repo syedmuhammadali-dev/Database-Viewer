@@ -13,12 +13,14 @@ import Link from "next/link";
 type WorkspaceHeaderProps = {
   tableCount: number;
   activeTableName: string | null;
+  onImportClick: () => void;
   onClear: () => void;
 };
 
 export default function WorkspaceHeader({
   tableCount,
   activeTableName,
+  onImportClick,
   onClear,
 }: WorkspaceHeaderProps) {
   const hasData = tableCount > 0;
@@ -37,8 +39,9 @@ export default function WorkspaceHeader({
 
       <button
         type="button"
+        onClick={onImportClick}
         className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm text-zinc-200 transition-colors hover:bg-zinc-800"
-        title="Import a dataset (coming with import milestones)"
+        title="Import a dataset from a file"
       >
         <TableIcon className="h-4 w-4" aria-hidden />
         Dataset

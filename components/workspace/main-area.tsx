@@ -7,12 +7,13 @@ import {
   Table as TableIcon,
   Terminal,
 } from "lucide-react";
-import type { TableInfo, ViewMode } from "@/lib/types";
+import type { ParsedDataset, TableInfo, ViewMode } from "@/lib/types";
 
 type MainAreaProps = {
   tables: TableInfo[];
   activeTable: TableInfo | null;
   activeTableName: string | null;
+  activeDataset: ParsedDataset | null;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 };
@@ -21,6 +22,7 @@ export default function MainArea({
   tables,
   activeTable,
   activeTableName,
+  activeDataset,
   viewMode,
   onViewModeChange,
 }: MainAreaProps) {
@@ -71,7 +73,7 @@ export default function MainArea({
             {activeTable.columns.length} columns
           </span>
         </div>
-        <PanePlaceholder viewMode={viewMode} />
+        <PanePlaceholder viewMode={viewMode} activeDataset={activeDataset} />
       </div>
     </main>
   );
@@ -144,16 +146,27 @@ function EmptyState() {
   );
 }
 
-function PanePlaceholder({ viewMode }: { viewMode: ViewMode }) {
+function PanePlaceholder({
+  viewMode,
+  activeDataset,
+}: {
+  viewMode: ViewMode;
+  activeDataset: ParsedDataset | null;
+}) {
   const copy: Record<ViewMode, string> = {
     table: "Table view will render your rows here.",
     json: "JSON view will display the raw records here.",
     sql: "SQL editor will let you query this table here.",
   };
   return (
-    <div className="flex flex-1 items-center justify-center gap-2 text-sm text-zinc-500">
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-zinc-500">
       <FileJson className="h-4 w-4 text-zinc-600" aria-hidden />
-      {copy[viewMode]}
+      <p>{copy[viewMode]}</p>
+      {activeDataset ? (
+        <p className="text-xs text-zinc-600">
+          {activeDataset.rows.length.toLocaleString()} parsed rows ready.
+        </p>
+      ) : null}
     </div>
   );
 }
