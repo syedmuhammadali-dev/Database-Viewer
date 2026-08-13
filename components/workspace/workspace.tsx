@@ -105,6 +105,8 @@ export default function Workspace() {
           onViewModeChange={setViewMode}
           runQuery={runQuery}
           sqlDisabled={!ready}
+          onImported={handleImported}
+          importDisabled={!ready}
         />
       </div>
       <div className="flex h-7 shrink-0 items-center border-t border-zinc-800 bg-zinc-900/60 px-3 text-[11px] text-zinc-500">

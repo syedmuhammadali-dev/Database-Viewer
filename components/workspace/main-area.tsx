@@ -3,16 +3,16 @@
 import {
   Braces,
   FileJson,
-  FileSpreadsheet,
   Loader2,
   Table as TableIcon,
   Terminal,
   TriangleAlert,
 } from "lucide-react";
-import type { DataRow, TableInfo, ViewMode } from "@/lib/types";
+import type { DataRow, ParsedDataset, TableInfo, ViewMode } from "@/lib/types";
 import type { QueryResult } from "@/lib/database";
 import DataTable from "@/components/table/data-table";
 import SqlConsole from "@/components/sql/sql-console";
+import InlineImport from "@/components/import/inline-import";
 
 type MainAreaProps = {
   tables: TableInfo[];
@@ -25,6 +25,8 @@ type MainAreaProps = {
   onViewModeChange: (mode: ViewMode) => void;
   runQuery: (sql: string) => Promise<QueryResult>;
   sqlDisabled: boolean;
+  onImported: (dataset: ParsedDataset) => void | Promise<void>;
+  importDisabled: boolean;
 };
 
 export default function MainArea({
@@ -38,6 +40,8 @@ export default function MainArea({
   onViewModeChange,
   runQuery,
   sqlDisabled,
+  onImported,
+  importDisabled,
 }: MainAreaProps) {
   const hasData = tables.length > 0;
 
@@ -48,7 +52,7 @@ export default function MainArea({
         {viewMode === "sql" ? (
           <SqlConsole runQuery={runQuery} disabled={sqlDisabled} />
         ) : (
-          <EmptyState />
+          <InlineImport onImported={onImported} disabled={importDisabled} />
         )}
       </main>
     );
@@ -188,24 +192,6 @@ function TabBar({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900">
-        <FileSpreadsheet className="h-7 w-7 text-zinc-500" aria-hidden />
-      </div>
-      <div>
-        <h2 className="text-base font-medium text-zinc-200">
-          No tables yet.
-        </h2>
-        <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-zinc-500">
-          Upload a CSV, Excel or JSON file, or import data from Google Drive.
-        </p>
-      </div>
     </div>
   );
 }

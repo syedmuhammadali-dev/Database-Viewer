@@ -8,6 +8,41 @@ import {
 } from "./validate";
 import { parseCsv } from "@/lib/parsers/csv";
 import { parseJson } from "@/lib/parsers/json";
+import { inspectWorkbook, parseSheet } from "@/lib/parsers/excel";
+import { readFileAsArrayBuffer } from "./read-file";
+
+export type ImportFileOutcome = { name: string; rows: number };
+
+export async function importFileInto(
+  file: File,
+  onImported: (dataset: ParsedDataset) => void | Promise<void>,
+  signal: AbortSignal,
+): Promise<ImportFileOutcome[]> {
+  validateImportFile(file);
+  const buffer = await readFileAsArrayBuffer(file, () => undefined, signal);
+  const bytes = new Uint8Array(buffer);
+  const kind = detectFileKind(file, bytes);
+  if (kind === "unknown") {
+    throw new ImportError(
+      `"${file.name}" is not a supported file. Upload a .csv, .xlsx, .xls or .json file.`,
+    );
+  }
+  const outcomes: ImportFileOutcome[] = [];
+  if (kind === "excel") {
+    const workbook = inspectWorkbook(buffer, file.name);
+    for (const sheet of workbook.sheets) {
+      const dataset = parseSheet(buffer, sheet.name, file.name);
+      await onImported(dataset);
+      outcomes.push({ name: dataset.name, rows: dataset.rows.length });
+    }
+    return outcomes;
+  }
+  const content = decodeUtf8(bytes);
+  const dataset = await importContent(kind, file.name, content);
+  await onImported(dataset);
+  outcomes.push({ name: dataset.name, rows: dataset.rows.length });
+  return outcomes;
+}
 
 export async function importFile(file: File): Promise<ParsedDataset> {
   validateImportFile(file);
