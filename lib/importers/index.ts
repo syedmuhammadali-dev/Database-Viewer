@@ -6,6 +6,7 @@ import {
   type FileKind,
 } from "./validate";
 import { parseCsv } from "@/lib/parsers/csv";
+import { parseJson } from "@/lib/parsers/json";
 
 export async function importFile(file: File): Promise<ParsedDataset> {
   const kind = detectFileKind(file);
@@ -24,9 +25,11 @@ export async function importContent(
     case "csv":
       return parseCsv(content, name);
     case "excel":
-      throw new ImportError("Excel import is coming very soon.");
+      throw new ImportError(
+        `"${fileName}" looks like an Excel file. Use the worksheet picker to import it.`,
+      );
     case "json":
-      throw new ImportError("JSON import is coming very soon.");
+      return parseJson(content, name);
     default:
       throw new ImportError(
         "Unsupported file type. Upload a .csv, .xlsx, .xls or .json file.",
