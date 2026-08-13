@@ -19,6 +19,7 @@ export default function Workspace() {
     importDataset,
     clear,
     selectAll,
+    runQuery,
   } = useDatabase();
 
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
@@ -102,6 +103,8 @@ export default function Workspace() {
           rowsError={rowsError}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          runQuery={runQuery}
+          sqlDisabled={!ready}
         />
       </div>
       <div className="flex h-7 shrink-0 items-center border-t border-zinc-800 bg-zinc-900/60 px-3 text-[11px] text-zinc-500">

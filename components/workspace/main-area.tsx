@@ -10,7 +10,9 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type { DataRow, TableInfo, ViewMode } from "@/lib/types";
+import type { QueryResult } from "@/lib/database";
 import DataTable from "@/components/table/data-table";
+import SqlConsole from "@/components/sql/sql-console";
 
 type MainAreaProps = {
   tables: TableInfo[];
@@ -21,6 +23,8 @@ type MainAreaProps = {
   rowsError: string | null;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  runQuery: (sql: string) => Promise<QueryResult>;
+  sqlDisabled: boolean;
 };
 
 export default function MainArea({
@@ -32,18 +36,20 @@ export default function MainArea({
   rowsError,
   viewMode,
   onViewModeChange,
+  runQuery,
+  sqlDisabled,
 }: MainAreaProps) {
   const hasData = tables.length > 0;
 
   if (!hasData) {
     return (
       <main className="flex flex-1 flex-col overflow-hidden">
-        <TabBar
-          viewMode={viewMode}
-          onViewModeChange={onViewModeChange}
-          disabled
-        />
-        <EmptyState />
+        <TabBar viewMode={viewMode} onViewModeChange={onViewModeChange} />
+        {viewMode === "sql" ? (
+          <SqlConsole runQuery={runQuery} disabled={sqlDisabled} />
+        ) : (
+          <EmptyState />
+        )}
       </main>
     );
   }
@@ -51,43 +57,43 @@ export default function MainArea({
   if (!activeTableName || !activeTable) {
     return (
       <main className="flex flex-1 flex-col overflow-hidden">
-        <TabBar
-          viewMode={viewMode}
-          onViewModeChange={onViewModeChange}
-          disabled
-        />
-        <div className="flex flex-1 items-center justify-center text-sm text-zinc-500">
-          Select a table from the sidebar.
-        </div>
+        <TabBar viewMode={viewMode} onViewModeChange={onViewModeChange} />
+        {viewMode === "sql" ? (
+          <SqlConsole runQuery={runQuery} disabled={sqlDisabled} />
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-sm text-zinc-500">
+            Select a table from the sidebar.
+          </div>
+        )}
       </main>
     );
   }
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
-      <TabBar
-        viewMode={viewMode}
-        onViewModeChange={onViewModeChange}
-        disabled={false}
-      />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
-          <span className="text-sm font-medium text-zinc-200">
-            {activeTable.name}
-          </span>
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] tabular-nums text-zinc-400">
-            {activeTable.rowCount.toLocaleString()} rows ·{" "}
-            {activeTable.columns.length} columns
-          </span>
+      <TabBar viewMode={viewMode} onViewModeChange={onViewModeChange} />
+      {viewMode === "sql" ? (
+        <SqlConsole runQuery={runQuery} disabled={sqlDisabled} />
+      ) : (
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
+            <span className="text-sm font-medium text-zinc-200">
+              {activeTable.name}
+            </span>
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] tabular-nums text-zinc-400">
+              {activeTable.rowCount.toLocaleString()} rows ·{" "}
+              {activeTable.columns.length} columns
+            </span>
+          </div>
+          <Pane
+            viewMode={viewMode}
+            columns={activeTable.columns}
+            rows={rows}
+            rowsLoading={rowsLoading}
+            rowsError={rowsError}
+          />
         </div>
-        <Pane
-          viewMode={viewMode}
-          columns={activeTable.columns}
-          rows={rows}
-          rowsLoading={rowsLoading}
-          rowsError={rowsError}
-        />
-      </div>
+      )}
     </main>
   );
 }
@@ -146,11 +152,9 @@ function Pane({
 function TabBar({
   viewMode,
   onViewModeChange,
-  disabled,
 }: {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  disabled: boolean;
 }) {
   const tabs: { key: ViewMode; label: string; icon: typeof TableIcon }[] = [
     { key: "table", label: "Table", icon: TableIcon },
@@ -174,8 +178,7 @@ function TabBar({
             role="tab"
             aria-selected={isActive}
             onClick={() => onViewModeChange(tab.key)}
-            disabled={disabled}
-            className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${isActive
+            className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-sm transition-colors ${isActive
                 ? "bg-zinc-800 text-zinc-100"
                 : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
               }`}
