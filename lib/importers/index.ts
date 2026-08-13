@@ -70,7 +70,7 @@ export async function importContent(
       return parseJson(content, name);
     default:
       throw new ImportError(
-        "Unsupported file type. Upload a .csv, .xlsx, .xls or .json file.",
+        "Unsupported file type. Upload a .csv, .xlsx, .xls or .json file — documents and presentations (.docx, .odt, .pptx) can't be imported as data tables.",
       );
   }
 }

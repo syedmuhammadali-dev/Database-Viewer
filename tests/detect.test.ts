@@ -82,6 +82,18 @@ describe("detectFileKind", () => {
       "unknown",
     );
   });
+
+  it("does not misread Word/PowerPoint files as Excel despite ZIP magic", async () => {
+    const docx = file("report.docx", new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]));
+    expect(detectFileKind(docx, await bytesOf(docx))).toBe("unknown");
+    const pptx = file("deck.pptx", new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]));
+    expect(detectFileKind(pptx, await bytesOf(pptx))).toBe("unknown");
+  });
+
+  it("still detects real Excel workbooks by ZIP magic", async () => {
+    const xlsx = file("book.xlsx", new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]));
+    expect(detectFileKind(xlsx, await bytesOf(xlsx))).toBe("excel");
+  });
 });
 
 describe("decodeUtf8", () => {

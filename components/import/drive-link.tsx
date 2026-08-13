@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import {
   fetchDriveFile,
-  parseDriveFileId,
+  fetchDriveSpreadsheet,
+  isDocsDocumentLink,
+  parseDriveLink,
 } from "@/lib/importers/drive";
 import { toUserMessage } from "@/lib/errors";
 import { isAbortError } from "@/lib/importers/read-file";
@@ -25,21 +27,27 @@ export default function GoogleDriveLink({
 
   const handleFetch = useCallback(async () => {
     if (fetching || disabled) return;
-    const id = parseDriveFileId(link);
-    if (!id) {
-      setError(
-        'That doesn\'t look like a Google Drive file link. Paste a share link like https://drive.google.com/file/d/…/view',
-      );
+    const target = parseDriveLink(link);
+    if (!target) {
+      if (isDocsDocumentLink(link)) {
+        setError(
+          "Google Docs documents can't be turned into data tables yet. Export the document to CSV or Excel, or use a Google Sheets link.",
+        );
+      } else {
+        setError(
+          'That doesn\'t look like a supported Google link. Paste a Drive file link or a Sheets link.',
+        );
+      }
       return;
     }
     abortRef.current = new AbortController();
     setFetching(true);
     setError(null);
     try {
-      const { bytes, name } = await fetchDriveFile(
-        id,
-        abortRef.current.signal,
-      );
+      const { bytes, name } =
+        target.kind === "spreadsheet"
+          ? await fetchDriveSpreadsheet(target.id, abortRef.current.signal)
+          : await fetchDriveFile(target.id, abortRef.current.signal);
       onFile(new File([bytes], name, { type: "application/octet-stream" }));
       setLink("");
     } catch (cause) {
@@ -77,7 +85,7 @@ export default function GoogleDriveLink({
             type="url"
             value={link}
             onChange={(event) => setLink(event.target.value)}
-            placeholder="Paste a Google Drive file link…"
+            placeholder="Paste a Google Drive file or Sheets link…"
             aria-label="Google Drive file link"
             className="w-full rounded-md border border-zinc-800 bg-zinc-900 py-2 pl-8 pr-3 text-sm text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-blue-500"
           />
@@ -99,8 +107,9 @@ export default function GoogleDriveLink({
         <p className="mt-2 text-xs leading-5 text-amber-300">{error}</p>
       ) : (
         <p className="mt-2 text-xs leading-5 text-zinc-500">
-          The file must be publicly shared (&quot;Anyone with the link&quot;).
-          It is fetched straight into your browser and never leaves it.
+          The file or spreadsheet must be publicly shared (&quot;Anyone with
+          the link&quot;). It is fetched straight into your browser and never
+          leaves it.
         </p>
       )}
     </form>

@@ -38,6 +38,15 @@ function extensionOf(name: string): string | null {
 
 export type FileKind = "csv" | "excel" | "json" | "unknown";
 
+const OFFICE_DOCUMENT_EXTENSIONS = [
+  ".doc",
+  ".docx",
+  ".odt",
+  ".ppt",
+  ".pptx",
+  ".odp",
+];
+
 function kindFromExtension(ext: string): FileKind {
   if (SUPPORTED_EXTENSIONS.csv.includes(ext)) return "csv";
   if (SUPPORTED_EXTENSIONS.excel.includes(ext)) return "excel";
@@ -112,6 +121,12 @@ export function detectFileKind(file: File, bytes?: Uint8Array): FileKind {
   if (!bytes) return extKind;
   const sniffed = sniffFileKind(bytes);
   if (sniffed === "unknown") return extKind !== "unknown" ? extKind : "unknown";
+  // Word/PowerPoint/OpenDocument files are also ZIP archives, but they are
+  // documents, not spreadsheets — surface them as unsupported instead of
+  // misreading them as Excel workbooks.
+  if (sniffed === "excel" && ext && OFFICE_DOCUMENT_EXTENSIONS.includes(ext)) {
+    return "unknown";
+  }
   return sniffed;
 }
 
