@@ -1,0 +1,159 @@
+"use client";
+
+import {
+  Braces,
+  FileJson,
+  FileSpreadsheet,
+  Table as TableIcon,
+  Terminal,
+} from "lucide-react";
+import type { TableInfo, ViewMode } from "@/lib/types";
+
+type MainAreaProps = {
+  tables: TableInfo[];
+  activeTable: TableInfo | null;
+  activeTableName: string | null;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+};
+
+export default function MainArea({
+  tables,
+  activeTable,
+  activeTableName,
+  viewMode,
+  onViewModeChange,
+}: MainAreaProps) {
+  const hasData = tables.length > 0;
+
+  if (!hasData) {
+    return (
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <TabBar
+          viewMode={viewMode}
+          onViewModeChange={onViewModeChange}
+          disabled
+        />
+        <EmptyState />
+      </main>
+    );
+  }
+
+  if (!activeTableName || !activeTable) {
+    return (
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <TabBar
+          viewMode={viewMode}
+          onViewModeChange={onViewModeChange}
+          disabled
+        />
+        <div className="flex flex-1 items-center justify-center text-sm text-zinc-500">
+          Select a table from the sidebar.
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex flex-1 flex-col overflow-hidden">
+      <TabBar
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        disabled={false}
+      />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
+          <span className="text-sm font-medium text-zinc-200">
+            {activeTable.name}
+          </span>
+          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] tabular-nums text-zinc-400">
+            {activeTable.rowCount.toLocaleString()} rows ·{" "}
+            {activeTable.columns.length} columns
+          </span>
+        </div>
+        <PanePlaceholder viewMode={viewMode} />
+      </div>
+    </main>
+  );
+}
+
+function TabBar({
+  viewMode,
+  onViewModeChange,
+  disabled,
+}: {
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+  disabled: boolean;
+}) {
+  const tabs: { key: ViewMode; label: string; icon: typeof TableIcon }[] = [
+    { key: "table", label: "Table", icon: TableIcon },
+    { key: "json", label: "JSON", icon: Braces },
+    { key: "sql", label: "SQL", icon: Terminal },
+  ];
+
+  return (
+    <div
+      className="flex h-9 shrink-0 items-center gap-1 border-b border-zinc-800 bg-zinc-900/40 px-2"
+      role="tablist"
+      aria-label="Data views"
+    >
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = viewMode === tab.key;
+        return (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onViewModeChange(tab.key)}
+            disabled={disabled}
+            className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${isActive
+                ? "bg-zinc-800 text-zinc-100"
+                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+              }`}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900">
+        <FileSpreadsheet className="h-7 w-7 text-zinc-500" aria-hidden />
+      </div>
+      <div>
+        <h2 className="text-base font-medium text-zinc-200">
+          No tables yet.
+        </h2>
+        <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-zinc-500">
+          Upload a CSV, Excel or JSON file, or import data from Google Drive.
+        </p>
+      </div>
+      <div className="text-xs text-zinc-600">
+        For now, the workspace shell is ready — importing lands next.
+      </div>
+    </div>
+  );
+}
+
+function PanePlaceholder({ viewMode }: { viewMode: ViewMode }) {
+  const copy: Record<ViewMode, string> = {
+    table: "Table view will render your rows here.",
+    json: "JSON view will display the raw records here.",
+    sql: "SQL editor will let you query this table here.",
+  };
+  return (
+    <div className="flex flex-1 items-center justify-center gap-2 text-sm text-zinc-500">
+      <FileJson className="h-4 w-4 text-zinc-600" aria-hidden />
+      {copy[viewMode]}
+    </div>
+  );
+}
