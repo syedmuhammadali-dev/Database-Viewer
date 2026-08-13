@@ -32,6 +32,25 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env
+.env.local
+.env*.local
+.env.development*
+.env.production*
+.phpunit.result.cache
+
+# secrets / credentials (defense in depth)
+*.pem
+*.p12
+*.pfx
+serviceAccount*.json
+service-account*.json
+*-service-account.json
+firebase-adminsdk*.json
+.credentials/
+credentials/
+
+# local working task tracker (kept local only)
+remaining-tasks.md
 
 # vercel
 .vercel
