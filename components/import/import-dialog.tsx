@@ -15,6 +15,7 @@ import Dropzone from "./dropzone";
 import type { ParsedDataset } from "@/lib/types";
 import {
   detectFileKind,
+  decodeUtf8,
   humanFileSize,
   validateImportFile,
   getMaxFileSizeBytes,
@@ -22,7 +23,6 @@ import {
 } from "@/lib/importers/validate";
 import { importContent } from "@/lib/importers";
 import {
-  readFileWithProgress,
   readFileAsArrayBuffer,
   isAbortError,
 } from "@/lib/importers/read-file";
@@ -92,7 +92,7 @@ export default function ImportDialog({
   const processItem = useCallback(
     async (item: FileItem, signal: AbortSignal) => {
       try {
-        validateImportFile(item.file, item.kind);
+        validateImportFile(item.file);
       } catch (error) {
         setItem(item.id, { status: "error", error: toUserMessage(error) });
         return;
@@ -101,12 +101,24 @@ export default function ImportDialog({
       try {
         setItem(item.id, { status: "reading", progress: 0, error: null });
 
-        if (item.kind === "excel") {
-          const buffer = await readFileAsArrayBuffer(
-            item.file,
-            (pct) => setItem(item.id, { progress: pct }),
-            signal,
-          );
+        const buffer = await readFileAsArrayBuffer(
+          item.file,
+          (pct) => setItem(item.id, { progress: pct }),
+          signal,
+        );
+        const bytes = new Uint8Array(buffer);
+        const kind = detectFileKind(item.file, bytes);
+        if (kind === "unknown") {
+          setItem(item.id, {
+            status: "error",
+            error:
+              'Unsupported file type. Supported: CSV/TSV, Excel (.xlsx/.xls) and JSON — detected automatically.',
+          });
+          return;
+        }
+        setItem(item.id, { kind, status: "parsing" });
+
+        if (kind === "excel") {
           const inspection = inspectWorkbook(buffer, item.file.name);
           setItem(item.id, {
             status: "done",
@@ -126,13 +138,8 @@ export default function ImportDialog({
           return;
         }
 
-        const content = await readFileWithProgress(
-          item.file,
-          (pct) => setItem(item.id, { progress: pct }),
-          (status) => setItem(item.id, { status }),
-          signal,
-        );
-        const dataset = await importContent(item.kind, item.file.name, content);
+        const content = decodeUtf8(bytes);
+        const dataset = await importContent(kind, item.file.name, content);
         await onImported(dataset);
         setItem(item.id, { status: "done", progress: 100, result: dataset });
       } catch (error) {

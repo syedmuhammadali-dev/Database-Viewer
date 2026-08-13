@@ -2,6 +2,7 @@ import type { ParsedDataset } from "@/lib/types";
 import { ImportError } from "@/lib/errors";
 import {
   detectFileKind,
+  decodeUtf8,
   validateImportFile,
   type FileKind,
 } from "./validate";
@@ -9,9 +10,11 @@ import { parseCsv } from "@/lib/parsers/csv";
 import { parseJson } from "@/lib/parsers/json";
 
 export async function importFile(file: File): Promise<ParsedDataset> {
-  const kind = detectFileKind(file);
-  validateImportFile(file, kind);
-  const content = await file.text();
+  validateImportFile(file);
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const kind = detectFileKind(file, bytes);
+  const content = decodeUtf8(bytes);
   return importContent(kind, file.name, content);
 }
 

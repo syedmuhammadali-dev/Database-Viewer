@@ -1,11 +1,5 @@
 export type DataRow = Record<string, unknown>;
 
-export type ColumnInfo = {
-  name: string;
-  type: string;
-  nullable: boolean;
-};
-
 export type ParsedDataset = {
   name: string;
   columns: string[];
@@ -26,9 +20,3 @@ export type DataSourceKind =
   | "json"
   | "google-drive"
   | "google-sheets";
-
-export type DatasetContext = {
-  sourceKind: DataSourceKind;
-  sourceName: string;
-  tableName: string;
-};
