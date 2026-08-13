@@ -42,8 +42,10 @@ export default function Dropzone({ onFiles, disabled }: DropzoneProps) {
             inputRef.current?.click();
           }
         }}
-        onClick={() => {
-          if (!disabled) inputRef.current?.click();
+        onClick={(event) => {
+          if (!disabled && event.target !== folderRef.current) {
+            inputRef.current?.click();
+          }
         }}
         onDragOver={(event) => {
           event.preventDefault();
@@ -68,18 +70,6 @@ export default function Dropzone({ onFiles, disabled }: DropzoneProps) {
             event.target.value = "";
           }}
         />
-        <input
-          ref={folderRef}
-          type="file"
-          multiple
-          className="sr-only"
-          {...directoryAttributes}
-          onChange={(event) => {
-            const files = Array.from(event.target.files ?? []);
-            if (files.length > 0) onFiles(files);
-            event.target.value = "";
-          }}
-        />
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-zinc-300 transition-colors group-hover:bg-zinc-700">
           {isDragging ? (
             <CloudUpload className="h-6 w-6" aria-hidden />
@@ -97,6 +87,19 @@ export default function Dropzone({ onFiles, disabled }: DropzoneProps) {
         </div>
       </div>
       <div className="flex items-center justify-center">
+        <input
+          ref={folderRef}
+          type="file"
+          multiple
+          className="sr-only"
+          {...directoryAttributes}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            if (files.length > 0) onFiles(files);
+            event.target.value = "";
+          }}
+        />
         <button
           type="button"
           disabled={disabled}
