@@ -81,7 +81,7 @@ export default function Workspace() {
       <WorkspaceHeader
         tableCount={tables.length}
         activeTableName={activeTableName}
-        importDisabled={!ready}
+        importDisabled={false}
         onImportClick={() => setImportOpen(true)}
         onClear={handleClear}
       />
@@ -104,9 +104,7 @@ export default function Workspace() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           runQuery={runQuery}
-          sqlDisabled={!ready}
           onImported={handleImported}
-          importDisabled={!ready}
         />
       </div>
       <div className="flex h-7 shrink-0 items-center border-t border-zinc-800 bg-zinc-900/60 px-3 text-[11px] text-zinc-500">

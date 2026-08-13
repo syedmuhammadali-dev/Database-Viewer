@@ -24,9 +24,7 @@ type MainAreaProps = {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   runQuery: (sql: string) => Promise<QueryResult>;
-  sqlDisabled: boolean;
   onImported: (dataset: ParsedDataset) => void | Promise<void>;
-  importDisabled: boolean;
 };
 
 export default function MainArea({
@@ -39,9 +37,7 @@ export default function MainArea({
   viewMode,
   onViewModeChange,
   runQuery,
-  sqlDisabled,
   onImported,
-  importDisabled,
 }: MainAreaProps) {
   const hasData = tables.length > 0;
 
@@ -50,9 +46,9 @@ export default function MainArea({
       <main className="flex flex-1 flex-col overflow-hidden">
         <TabBar viewMode={viewMode} onViewModeChange={onViewModeChange} />
         {viewMode === "sql" ? (
-          <SqlConsole runQuery={runQuery} disabled={sqlDisabled} />
+          <SqlConsole runQuery={runQuery} />
         ) : (
-          <InlineImport onImported={onImported} disabled={importDisabled} />
+          <InlineImport onImported={onImported} />
         )}
       </main>
     );
@@ -63,7 +59,7 @@ export default function MainArea({
       <main className="flex flex-1 flex-col overflow-hidden">
         <TabBar viewMode={viewMode} onViewModeChange={onViewModeChange} />
         {viewMode === "sql" ? (
-          <SqlConsole runQuery={runQuery} disabled={sqlDisabled} />
+          <SqlConsole runQuery={runQuery} />
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-zinc-500">
             Select a table from the sidebar.
@@ -77,7 +73,7 @@ export default function MainArea({
     <main className="flex flex-1 flex-col overflow-hidden">
       <TabBar viewMode={viewMode} onViewModeChange={onViewModeChange} />
       {viewMode === "sql" ? (
-        <SqlConsole runQuery={runQuery} disabled={sqlDisabled} />
+        <SqlConsole runQuery={runQuery} />
       ) : (
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
