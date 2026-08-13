@@ -13,6 +13,7 @@ import Link from "next/link";
 type WorkspaceHeaderProps = {
   tableCount: number;
   activeTableName: string | null;
+  importDisabled?: boolean;
   onImportClick: () => void;
   onClear: () => void;
 };
@@ -20,6 +21,7 @@ type WorkspaceHeaderProps = {
 export default function WorkspaceHeader({
   tableCount,
   activeTableName,
+  importDisabled = false,
   onImportClick,
   onClear,
 }: WorkspaceHeaderProps) {
@@ -40,8 +42,13 @@ export default function WorkspaceHeader({
       <button
         type="button"
         onClick={onImportClick}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm text-zinc-200 transition-colors hover:bg-zinc-800"
-        title="Import a dataset from a file"
+        disabled={importDisabled}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm text-zinc-200 transition-colors hover:bg-zinc-800 disabled:pointer-events-none disabled:opacity-40"
+        title={
+          importDisabled
+            ? "Database engine is initializing"
+            : "Import a dataset from a file"
+        }
       >
         <TableIcon className="h-4 w-4" aria-hidden />
         Dataset

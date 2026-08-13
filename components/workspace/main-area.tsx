@@ -4,17 +4,21 @@ import {
   Braces,
   FileJson,
   FileSpreadsheet,
+  Loader2,
   Table as TableIcon,
   Terminal,
+  TriangleAlert,
 } from "lucide-react";
-import type { ParsedDataset, TableInfo, ViewMode } from "@/lib/types";
+import type { DataRow, TableInfo, ViewMode } from "@/lib/types";
 import DataTable from "@/components/table/data-table";
 
 type MainAreaProps = {
   tables: TableInfo[];
   activeTable: TableInfo | null;
   activeTableName: string | null;
-  activeDataset: ParsedDataset | null;
+  rows: DataRow[];
+  rowsLoading: boolean;
+  rowsError: string | null;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 };
@@ -23,7 +27,9 @@ export default function MainArea({
   tables,
   activeTable,
   activeTableName,
-  activeDataset,
+  rows,
+  rowsLoading,
+  rowsError,
   viewMode,
   onViewModeChange,
 }: MainAreaProps) {
@@ -74,7 +80,13 @@ export default function MainArea({
             {activeTable.columns.length} columns
           </span>
         </div>
-        <Pane viewMode={viewMode} activeDataset={activeDataset} />
+        <Pane
+          viewMode={viewMode}
+          columns={activeTable.columns}
+          rows={rows}
+          rowsLoading={rowsLoading}
+          rowsError={rowsError}
+        />
       </div>
     </main>
   );
@@ -82,15 +94,37 @@ export default function MainArea({
 
 function Pane({
   viewMode,
-  activeDataset,
+  columns,
+  rows,
+  rowsLoading,
+  rowsError,
 }: {
   viewMode: ViewMode;
-  activeDataset: ParsedDataset | null;
+  columns: string[];
+  rows: DataRow[];
+  rowsLoading: boolean;
+  rowsError: string | null;
 }) {
-  if (viewMode === "table" && activeDataset) {
+  if (rowsLoading) {
     return (
-      <DataTable columns={activeDataset.columns} rows={activeDataset.rows} />
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-zinc-500">
+        <Loader2 className="h-4 w-4 animate-spin text-zinc-600" aria-hidden />
+        <p>Loading rows…</p>
+      </div>
     );
+  }
+
+  if (rowsError) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-amber-400">
+        <TriangleAlert className="h-4 w-4" aria-hidden />
+        <p>{rowsError}</p>
+      </div>
+    );
+  }
+
+  if (viewMode === "table") {
+    return <DataTable columns={columns} rows={rows} />;
   }
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-zinc-500">
@@ -98,13 +132,11 @@ function Pane({
       <p>
         {viewMode === "json"
           ? "JSON view will display the raw records here."
-          : viewMode === "sql"
-            ? "SQL editor will let you query this table here."
-            : "Select a table to view its rows."}
+          : "SQL editor will let you query this table here."}
       </p>
-      {activeDataset ? (
+      {rows.length > 0 ? (
         <p className="text-xs text-zinc-600">
-          {activeDataset.rows.length.toLocaleString()} rows ready.
+          {rows.length.toLocaleString()} rows ready.
         </p>
       ) : null}
     </div>

@@ -55,7 +55,7 @@ type ExcelItem = {
 type ImportDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImported: (dataset: ParsedDataset) => void;
+  onImported: (dataset: ParsedDataset) => void | Promise<void>;
 };
 
 function newItem(file: File): FileItem {
@@ -133,8 +133,8 @@ export default function ImportDialog({
           signal,
         );
         const dataset = await importContent(item.kind, item.file.name, content);
+        await onImported(dataset);
         setItem(item.id, { status: "done", progress: 100, result: dataset });
-        onImported(dataset);
       } catch (error) {
         if (isAbortError(error)) {
           setItems((prev) => prev.filter((p) => p.id !== item.id));
@@ -205,12 +205,12 @@ export default function ImportDialog({
     setExcelItems([]);
   }, []);
 
-  const importWorksheets = useCallback(() => {
+  const importWorksheets = useCallback(async () => {
     for (const excel of excelItems) {
       for (const sheetName of excel.selected) {
         try {
           const dataset = parseSheet(excel.buffer, sheetName, excel.file.name);
-          onImported(dataset);
+          await onImported(dataset);
           setItem(excel.id, {
             status: "done",
             result: dataset,

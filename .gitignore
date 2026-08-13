@@ -59,4 +59,9 @@ remaining-tasks.md
 *.tsbuildinfo
 next-env.d.ts
 
+# generated duckdb assets (copied from node_modules by prebuild/predev)
+/public/duckdb/
+remainig-tasks.md
+
+
 .vercel
