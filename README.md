@@ -60,6 +60,12 @@ npm i gdrive-db
 - **Import a collection as a table** — browse and query it exactly like a
   CSV/Excel/JSON import, including with SQL.
 - **Push a local table to Drive** to create a new collection from it.
+- **Browse an existing Drive folder** (any folder, not just the app-managed
+  one) via "Browse a Drive folder" in the import dialog/empty state — opens
+  Google's folder picker, then imports every file in the chosen folder
+  through the normal CSV/Excel/JSON/Parquet pipeline. Requires
+  `NEXT_PUBLIC_GOOGLE_PICKER_API_KEY` (see `.env.example`); hidden
+  automatically if that key isn't set.
 - **Edit and delete**:
   - via SQL — run `INSERT`/`UPDATE`/`DELETE` in the SQL console, then hit the
     cloud/sync icon next to a linked table to push the changes back to Drive.

@@ -17,6 +17,15 @@ export function isGoogleDriveConfigured(): boolean {
   return getGoogleClientId() !== null;
 }
 
+export function getGooglePickerApiKey(): string | null {
+  const key = process.env.NEXT_PUBLIC_GOOGLE_PICKER_API_KEY;
+  return key && key.trim().length > 0 ? key.trim() : null;
+}
+
+export function isPickerConfigured(): boolean {
+  return isGoogleDriveConfigured() && getGooglePickerApiKey() !== null;
+}
+
 let cachedProvider: BrowserAuthProvider | null = null;
 
 /**
@@ -43,10 +52,11 @@ export function signOutOfGoogleDrive(): void {
   cachedProvider = null;
 }
 
-export async function ensureSignedIn(): Promise<void> {
+/** Resolves a live Drive access token, prompting sign-in if needed. */
+export async function getDriveAccessToken(): Promise<string> {
   const provider = getBrowserAuthProvider();
   try {
-    await provider.getAccessToken();
+    return await provider.getAccessToken();
   } catch (cause) {
     throw new GoogleAuthError(
       cause instanceof Error
@@ -54,4 +64,8 @@ export async function ensureSignedIn(): Promise<void> {
         : "Google sign-in failed. Please try again.",
     );
   }
+}
+
+export async function ensureSignedIn(): Promise<void> {
+  await getDriveAccessToken();
 }

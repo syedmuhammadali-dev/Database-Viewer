@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Dropzone from "./dropzone";
 import GoogleDriveLink from "./drive-link";
+import DriveFolderPicker from "./drive-folder-picker";
 import type { ParsedDataset } from "@/lib/types";
 import {
   detectFileKind,
@@ -323,6 +324,9 @@ export default function ImportDialog({
 
         <div className="flex-1 overflow-y-auto p-4">
           <GoogleDriveLink onFile={handleDriveFile} disabled={isBusy} />
+          <div className="mt-3">
+            <DriveFolderPicker onFiles={onFiles} disabled={isBusy} />
+          </div>
           <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-zinc-600">
             <span className="h-px flex-1 bg-zinc-800" />
             or

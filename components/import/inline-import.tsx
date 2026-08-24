@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Dropzone from "./dropzone";
 import GoogleDriveLink from "./drive-link";
+import DriveFolderPicker from "./drive-folder-picker";
 import {
   importFileInto,
   type BinaryImportKind,
@@ -134,6 +135,11 @@ export default function InlineImport({
           <section aria-label="Import from Google Drive link">
             <GoogleDriveLink onFile={handleDriveFile} disabled={controlsDisabled} />
           </section>
+
+          <DriveFolderPicker
+            onFiles={(files) => void handleFiles(files)}
+            disabled={controlsDisabled}
+          />
 
           <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-zinc-600">
             <span className="h-px flex-1 bg-zinc-800" />
