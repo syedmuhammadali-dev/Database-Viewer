@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { Database, FileSpreadsheet, Table2, ShieldCheck } from "lucide-react";
+import {
+  Database,
+  FileSpreadsheet,
+  Table2,
+  ShieldCheck,
+  Cloud,
+  Terminal,
+  FolderSync,
+} from "lucide-react";
 
 export default function Home() {
   return (
@@ -52,7 +60,18 @@ export default function Home() {
 
         <p className="mt-6 max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
           Upload CSV, Excel or JSON files, connect Google Drive or Google
-          Sheets, and explore your data with Table, JSON and SQL views.
+          Sheets, and explore your data with Table, JSON and SQL views. Sign
+          in with Google and a Drive folder becomes a live database — edit it
+          with SQL or a MongoDB-style API, powered by{" "}
+          <a
+            href="https://www.npmjs.com/package/gdrive-db"
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-400 hover:underline"
+          >
+            gdrive-db
+          </a>
+          .
         </p>
 
         <div className="mt-10 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
@@ -111,12 +130,104 @@ export default function Home() {
             </li>
           </ul>
         </section>
+
+        <section
+          id="gdrive-db"
+          className="mt-8 w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 text-left"
+        >
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+            <Cloud className="h-4 w-4 text-blue-400" aria-hidden />
+            Your Google Drive folder, as a live database
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-zinc-400">
+            DataLens uses{" "}
+            <a
+              href="https://www.npmjs.com/package/gdrive-db"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-blue-400 hover:underline"
+            >
+              gdrive-db
+            </a>{" "}
+            — an open-source SDK that stores collections as JSON files inside
+            a folder in your own Google Drive. Sign in with Google, point
+            DataLens at a database folder, and every collection in it opens
+            here like a table in pgAdmin: browse it, run SQL against it, or
+            edit it MongoDB-style (<code className="text-zinc-300">find</code>
+            , <code className="text-zinc-300">insert</code>,{" "}
+            <code className="text-zinc-300">update</code>,{" "}
+            <code className="text-zinc-300">delete</code>) — every change
+            writes straight back to the files in Drive. It only ever
+            requests the least-privilege <code className="text-zinc-300">drive.file</code>{" "}
+            scope, so it can see just the folder it created, never your
+            whole Drive.
+          </p>
+
+          <div className="mt-4 grid gap-2 text-sm text-zinc-400 sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+              <FolderSync className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
+              Drive folder ↔ database
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+              <Terminal className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
+              Edit via SQL
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+              <Database className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
+              Or MongoDB-style CRUD
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <code className="flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-300">
+              npm i gdrive-db
+            </code>
+            <a
+              href="https://www.npmjs.com/package/gdrive-db"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 text-xs font-medium text-zinc-200 transition-colors hover:bg-zinc-800"
+            >
+              View on npm
+            </a>
+            <a
+              href="https://github.com/syedmuhammadali-dev/G-Drive-DB"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 text-xs font-medium text-zinc-200 transition-colors hover:bg-zinc-800"
+            >
+              Source on GitHub
+            </a>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">
+            Not a replacement for Postgres/Mongo/Firebase — great for
+            prototypes, small tools, and learning. See the{" "}
+            <a
+              href="https://www.npmjs.com/package/gdrive-db"
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-400 hover:underline"
+            >
+              package docs
+            </a>{" "}
+            for limits (equality-only filters, no transactions).
+          </p>
+        </section>
       </main>
 
       <footer className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-8 text-center">
         <p className="text-xs text-zinc-600">
           DataLens keeps your workspace temporary — export your work before
-          leaving the page.
+          leaving the page. Google Drive sync is powered by{" "}
+          <a
+            href="https://www.npmjs.com/package/gdrive-db"
+            target="_blank"
+            rel="noreferrer"
+            className="text-zinc-400 hover:underline"
+          >
+            gdrive-db
+          </a>
+          .
         </p>
       </footer>
     </div>

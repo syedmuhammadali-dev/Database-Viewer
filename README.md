@@ -20,6 +20,51 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Google Drive as a database (gdrive-db)
+
+DataLens can treat a folder in your own Google Drive as a live database,
+using [`gdrive-db`](https://www.npmjs.com/package/gdrive-db) — an
+open-source SDK that stores each collection as a JSON file under
+`DataLens/<database>/` in your Drive.
+
+```bash
+npm i gdrive-db
+```
+
+- Repo: https://github.com/syedmuhammadali-dev/G-Drive-DB
+- Only requests the least-privilege `drive.file` scope (access to files/
+  folders the app itself creates — never your whole Drive).
+
+### What it enables in this app
+
+- **Sign in with Google** from the Sidebar "Drive database" panel in
+  `/workspace`.
+- **Connect a database** (a Drive folder). Its collections list like tables.
+- **Import a collection as a table** — browse and query it exactly like a
+  CSV/Excel/JSON import, including with SQL.
+- **Push a local table to Drive** to create a new collection from it.
+- **Edit and delete**:
+  - via SQL — run `INSERT`/`UPDATE`/`DELETE` in the SQL console, then hit the
+    cloud/sync icon next to a linked table to push the changes back to Drive.
+  - via a MongoDB-style panel — click a collection to open a document view
+    with `insert`/`find`/`update`/`delete`, calling the `gdrive-db`
+    `Collection` API directly.
+
+### Setup
+
+1. Create a Google Cloud project, enable the **Google Drive API**.
+2. Create an OAuth **Web application** client ID, add your dev/prod origins
+   under "Authorized JavaScript origins".
+3. Copy `.env.example` to `.env.local` and set
+   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to that client ID.
+4. Restart `npm run dev`. The Drive database panel activates automatically
+   once the client ID is present.
+
+`gdrive-db` caches its access token in memory only — reloading the page
+requires signing in again, consistent with this app's no-persistence rule.
+It has no transactions and is not a replacement for Postgres/Mongo/Firebase;
+see the package docs for its filter/concurrency limits.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -5,6 +5,25 @@ import { instantiateBrowserDatabase } from "@/lib/database";
 import type { Database, QueryResult } from "@/lib/database";
 import type { ParsedDataset, TableInfo } from "@/lib/types";
 import { uniqueTableName } from "@/lib/importers";
+import { DatabaseError } from "@/lib/errors";
+
+const ENGINE_START_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new DatabaseError(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (cause) => {
+        clearTimeout(timer);
+        reject(cause);
+      },
+    );
+  });
+}
 
 export function useDatabase() {
   const dbRef = useRef<Database | null>(null);
@@ -38,13 +57,17 @@ export function useDatabase() {
 
   useEffect(() => {
     let cancelled = false;
-    const init = (async () => {
-      const db = await instantiateBrowserDatabase();
-      dbRef.current = db;
-      await db.init();
-      await refreshTables();
-      if (!cancelled) setReady(true);
-    })();
+    const init = withTimeout(
+      (async () => {
+        const db = await instantiateBrowserDatabase();
+        dbRef.current = db;
+        await db.init();
+        await refreshTables();
+        if (!cancelled) setReady(true);
+      })(),
+      ENGINE_START_TIMEOUT_MS,
+      "The in-browser database engine took too long to start. Reload the page to try again.",
+    );
     initRef.current = init;
 
     init.catch((cause: unknown) => {

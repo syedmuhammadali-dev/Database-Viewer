@@ -6,10 +6,15 @@ import Link from "next/link";
 import WorkspaceHeader from "./workspace-header";
 import Sidebar from "./sidebar";
 import MainArea from "./main-area";
+import DrivePanel from "./drive/drive-panel";
+import CollectionExplorer from "./drive/collection-explorer";
 import ImportDialog from "@/components/import/import-dialog";
 import type { DataRow, ParsedDataset, ViewMode } from "@/lib/types";
 import { useDatabase } from "@/hooks/use-database";
+import { useDriveDatabase, type DriveLink } from "@/hooks/use-drive-database";
 import { toUserMessage } from "@/lib/errors";
+
+const DRIVE_SYNC_LIMIT = 100_000;
 
 export default function Workspace() {
   const {
@@ -20,7 +25,9 @@ export default function Workspace() {
     clear,
     selectAll,
     runQuery,
+    refreshTables,
   } = useDatabase();
+  const drive = useDriveDatabase();
 
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
@@ -28,6 +35,17 @@ export default function Workspace() {
   const [rows, setRows] = useState<DataRow[]>([]);
   const [rowsLoading, setRowsLoading] = useState(false);
   const [rowsError, setRowsError] = useState<string | null>(null);
+  const [driveLinks, setDriveLinks] = useState<Record<string, DriveLink>>({});
+  const [busyTableName, setBusyTableName] = useState<string | null>(null);
+  const [busyCollection, setBusyCollection] = useState<string | null>(null);
+  const [driveActionError, setDriveActionError] = useState<string | null>(null);
+  const [explorerCollection, setExplorerCollection] = useState<string | null>(null);
+
+  const linkedTableNames = useMemo(() => new Set(Object.keys(driveLinks)), [driveLinks]);
+  const linkedCollectionNames = useMemo(
+    () => new Set(Object.values(driveLinks).map((link) => link.collectionName)),
+    [driveLinks],
+  );
 
   const activeTable = useMemo(
     () => tables.find((t) => t.name === activeTableName) ?? null,
@@ -74,7 +92,82 @@ export default function Workspace() {
     setViewMode("table");
     setRows([]);
     setRowsError(null);
+    setDriveLinks({});
   }, [clear]);
+
+  const handleRunQuery = useCallback(
+    async (sql: string) => {
+      const result = await runQuery(sql);
+      await refreshTables();
+      if (activeTableName) {
+        selectAll(activeTableName)
+          .then((res) => setRows(res.rows))
+          .catch(() => undefined);
+      }
+      return result;
+    },
+    [runQuery, refreshTables, activeTableName, selectAll],
+  );
+
+  const handleImportCollection = useCallback(
+    async (name: string) => {
+      setBusyCollection(name);
+      setDriveActionError(null);
+      try {
+        const dataset = await drive.importCollection(name);
+        const info = await importDataset(dataset);
+        setDriveLinks((prev) => ({
+          ...prev,
+          [info.name]: { databaseName: drive.databaseName ?? name, collectionName: name },
+        }));
+        setActiveTableName(info.name);
+        setViewMode("table");
+      } catch (cause) {
+        setDriveActionError(toUserMessage(cause));
+      } finally {
+        setBusyCollection(null);
+      }
+    },
+    [drive, importDataset],
+  );
+
+  const handlePushTable = useCallback(
+    async (tableName: string) => {
+      setBusyTableName(tableName);
+      setDriveActionError(null);
+      try {
+        const result = await selectAll(tableName, { limit: DRIVE_SYNC_LIMIT });
+        await drive.pushTableToDrive(tableName, result.rows);
+        setDriveLinks((prev) => ({
+          ...prev,
+          [tableName]: { databaseName: drive.databaseName ?? tableName, collectionName: tableName },
+        }));
+      } catch (cause) {
+        setDriveActionError(toUserMessage(cause));
+      } finally {
+        setBusyTableName(null);
+      }
+    },
+    [drive, selectAll],
+  );
+
+  const handleSyncTable = useCallback(
+    async (tableName: string) => {
+      const link = driveLinks[tableName];
+      if (!link) return;
+      setBusyTableName(tableName);
+      setDriveActionError(null);
+      try {
+        const result = await selectAll(tableName, { limit: DRIVE_SYNC_LIMIT });
+        await drive.syncTableToDrive(link.collectionName, result.rows);
+      } catch (cause) {
+        setDriveActionError(toUserMessage(cause));
+      } finally {
+        setBusyTableName(null);
+      }
+    },
+    [drive, driveLinks, selectAll],
+  );
 
   return (
     <div className="flex h-dvh flex-col bg-zinc-950 text-zinc-100">
@@ -93,6 +186,19 @@ export default function Workspace() {
             setActiveTableName(name);
             setViewMode("table");
           }}
+          linkedTableNames={linkedTableNames}
+          syncingTableName={busyTableName}
+          onPushTable={drive.databaseName ? handlePushTable : undefined}
+          onSyncTable={drive.databaseName ? handleSyncTable : undefined}
+          footer={
+            <DrivePanel
+              drive={drive}
+              linkedCollections={linkedCollectionNames}
+              busyCollection={busyCollection}
+              onImportCollection={handleImportCollection}
+              onOpenExplorer={setExplorerCollection}
+            />
+          }
         />
         <MainArea
           tables={tables}
@@ -103,7 +209,7 @@ export default function Workspace() {
           rowsError={rowsError}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          runQuery={runQuery}
+          runQuery={handleRunQuery}
           onImported={handleImported}
         />
       </div>
@@ -120,6 +226,11 @@ export default function Workspace() {
               <TriangleAlert className="h-3 w-3 text-amber-400" aria-hidden />
               {engineError}
             </>
+          ) : driveActionError ? (
+            <>
+              <TriangleAlert className="h-3 w-3 text-amber-400" aria-hidden />
+              {driveActionError}
+            </>
           ) : (
             "Temporary in-browser session"
           )}
@@ -131,6 +242,14 @@ export default function Workspace() {
         onOpenChange={setImportOpen}
         onImported={handleImported}
       />
+      {explorerCollection && drive.databaseName ? (
+        <CollectionExplorer
+          key={explorerCollection}
+          name={explorerCollection}
+          collection={drive.getCollectionHandle(explorerCollection)}
+          onClose={() => setExplorerCollection(null)}
+        />
+      ) : null}
       <Link
         href="/"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-zinc-800 focus:px-3 focus:py-1 focus:text-sm"
