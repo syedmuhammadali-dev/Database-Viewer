@@ -20,7 +20,7 @@
     "papaparse": "^5.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "xlsx": "file:C:/Users/ALIMAZ~1/AppData/Local/Temp/opencode/xlsx-0.20.3.tgz"
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
