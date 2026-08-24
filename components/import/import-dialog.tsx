@@ -22,7 +22,7 @@ import {
   getMaxFileSizeBytes,
   type FileKind,
 } from "@/lib/importers/validate";
-import { importContent } from "@/lib/importers";
+import { importContent, type BinaryImportKind, type ImportFileOutcome } from "@/lib/importers";
 import {
   readFileAsArrayBuffer,
   isAbortError,
@@ -43,6 +43,7 @@ type FileItem = {
   progress: number;
   error: string | null;
   result: ParsedDataset | null;
+  outcomeLabel: string | null;
 };
 
 type ExcelItem = {
@@ -57,6 +58,11 @@ type ImportDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImported: (dataset: ParsedDataset) => void | Promise<void>;
+  onBinaryFile?: (
+    file: File,
+    kind: BinaryImportKind,
+    buffer: ArrayBuffer,
+  ) => Promise<ImportFileOutcome[]>;
 };
 
 function newItem(file: File): FileItem {
@@ -68,6 +74,7 @@ function newItem(file: File): FileItem {
     progress: 0,
     error: null,
     result: null,
+    outcomeLabel: null,
   };
 }
 
@@ -75,6 +82,7 @@ export default function ImportDialog({
   open,
   onOpenChange,
   onImported,
+  onBinaryFile,
 }: ImportDialogProps) {
   const [items, setItems] = useState<FileItem[]>([]);
   const [excelItems, setExcelItems] = useState<ExcelItem[]>([]);
@@ -113,11 +121,39 @@ export default function ImportDialog({
           setItem(item.id, {
             status: "error",
             error:
-              'Unsupported file type. Supported: CSV/TSV, Excel (.xlsx/.xls) and JSON — detected automatically.',
+              'Unsupported file type. Supported: CSV/TSV, Excel (.xlsx/.xls), JSON and Parquet — detected automatically.',
           });
           return;
         }
         setItem(item.id, { kind, status: "parsing" });
+
+        if (kind === "sqlite") {
+          setItem(item.id, {
+            status: "error",
+            error:
+              "SQLite import isn't supported yet (the DuckDB SQLite extension is unstable in this build) — export its tables to CSV or Parquet and import those instead.",
+          });
+          return;
+        }
+
+        if (kind === "parquet") {
+          if (!onBinaryFile) {
+            setItem(item.id, {
+              status: "error",
+              error: `"${item.file.name}" can't be imported here.`,
+            });
+            return;
+          }
+          const outcomes = await onBinaryFile(item.file, kind, buffer);
+          setItem(item.id, {
+            status: "done",
+            progress: 100,
+            outcomeLabel: outcomes
+              .map((outcome) => `${outcome.name} (${outcome.rows.toLocaleString()} rows)`)
+              .join(", "),
+          });
+          return;
+        }
 
         if (kind === "excel") {
           const inspection = inspectWorkbook(buffer, item.file.name);
@@ -151,7 +187,7 @@ export default function ImportDialog({
         setItem(item.id, { status: "error", error: toUserMessage(error) });
       }
     },
-    [onImported, setItem],
+    [onImported, onBinaryFile, setItem],
   );
 
   const runBatch = useCallback(
@@ -252,7 +288,7 @@ export default function ImportDialog({
   );
 
   const doneCount =
-    items.filter((i) => i.status === "done" && i.result).length +
+    items.filter((i) => i.status === "done" && (i.result || i.outcomeLabel)).length +
     excelItems.length;
 
   return (
@@ -297,7 +333,7 @@ export default function ImportDialog({
               <Dropzone onFiles={onFiles} />
               <p className="text-center text-xs text-zinc-500">
                 Maximum file size: {humanFileSize(getMaxFileSizeBytes())}. CSV,
-                Excel and JSON files are supported.
+                Excel, JSON and Parquet files are supported.
               </p>
             </div>
           ) : (
@@ -384,7 +420,9 @@ export default function ImportDialog({
                             {humanFileSize(item.file.size)}
                             {item.result
                               ? ` · ${item.result.rows.length.toLocaleString()} rows`
-                              : ""}
+                              : item.outcomeLabel
+                                ? ` · ${item.outcomeLabel}`
+                                : ""}
                           </p>
                         </div>
                         {item.status === "done" ? (

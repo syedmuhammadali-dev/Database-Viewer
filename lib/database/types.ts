@@ -20,6 +20,8 @@ export interface Database {
   insertRow(name: string, values: DataRow): Promise<void>;
   updateRow(name: string, rowid: number, values: DataRow): Promise<void>;
   deleteRow(name: string, rowid: number): Promise<void>;
+  /** Loads a .parquet file directly (DuckDB reads it natively) as a single table named `name`. */
+  importParquetBuffer(name: string, buffer: ArrayBuffer): Promise<TableInfo>;
   dispose(): Promise<void>;
 }
 

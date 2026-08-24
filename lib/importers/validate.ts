@@ -4,12 +4,16 @@ export const SUPPORTED_EXTENSIONS: Record<string, string[]> = {
   csv: [".csv", ".txt", ".tsv"],
   excel: [".xlsx", ".xls"],
   json: [".json"],
+  sqlite: [".db", ".sqlite", ".sqlite3"],
+  parquet: [".parquet"],
 };
 
 export const ALL_SUPPORTED_EXTENSIONS = [
   ...SUPPORTED_EXTENSIONS.csv,
   ...SUPPORTED_EXTENSIONS.excel,
   ...SUPPORTED_EXTENSIONS.json,
+  ...SUPPORTED_EXTENSIONS.sqlite,
+  ...SUPPORTED_EXTENSIONS.parquet,
 ];
 
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
@@ -36,7 +40,14 @@ function extensionOf(name: string): string | null {
   return name.slice(dot).toLowerCase();
 }
 
-export type FileKind = "csv" | "excel" | "json" | "unknown";
+export type FileKind = "csv" | "excel" | "json" | "sqlite" | "parquet" | "unknown";
+
+const SQLITE_MAGIC = [
+  0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61,
+  0x74, 0x20, 0x33, 0x00,
+]; // "SQLite format 3\0"
+
+const PARQUET_MAGIC = [0x50, 0x41, 0x52, 0x31]; // "PAR1"
 
 const OFFICE_DOCUMENT_EXTENSIONS = [
   ".doc",
@@ -51,6 +62,8 @@ function kindFromExtension(ext: string): FileKind {
   if (SUPPORTED_EXTENSIONS.csv.includes(ext)) return "csv";
   if (SUPPORTED_EXTENSIONS.excel.includes(ext)) return "excel";
   if (SUPPORTED_EXTENSIONS.json.includes(ext)) return "json";
+  if (SUPPORTED_EXTENSIONS.sqlite.includes(ext)) return "sqlite";
+  if (SUPPORTED_EXTENSIONS.parquet.includes(ext)) return "parquet";
   return "unknown";
 }
 
@@ -90,6 +103,12 @@ export function sniffFileKind(bytes: Uint8Array): FileKind {
   ) {
     return "excel";
   }
+
+  // SQLite database file (header is the literal string "SQLite format 3\0").
+  if (startsWith(bytes, SQLITE_MAGIC)) return "sqlite";
+
+  // Parquet: starts (and ends) with the "PAR1" magic.
+  if (startsWith(bytes, PARQUET_MAGIC)) return "parquet";
 
   // Binary/opaque content we cannot turn into a table.
   if (containsNul(bytes.subarray(0, 4096))) return "unknown";

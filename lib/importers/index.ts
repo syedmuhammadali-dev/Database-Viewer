@@ -15,11 +15,18 @@ export type ImportPhase = "reading" | "parsing" | "importing";
 
 export type ImportFileOutcome = { name: string; rows: number };
 
+export type BinaryImportKind = "parquet";
+
 export async function importFileInto(
   file: File,
   onImported: (dataset: ParsedDataset) => void | Promise<void>,
   signal: AbortSignal,
   onPhase?: (phase: ImportPhase) => void,
+  onBinaryFile?: (
+    file: File,
+    kind: BinaryImportKind,
+    buffer: ArrayBuffer,
+  ) => Promise<ImportFileOutcome[]>,
 ): Promise<ImportFileOutcome[]> {
   validateImportFile(file);
   onPhase?.("reading");
@@ -28,8 +35,22 @@ export async function importFileInto(
   const kind = detectFileKind(file, bytes);
   if (kind === "unknown") {
     throw new ImportError(
-      `"${file.name}" is not a supported file. Upload a .csv, .xlsx, .xls or .json file.`,
+      `"${file.name}" is not a supported file. Upload a .csv, .xlsx, .xls, .json or .parquet file.`,
     );
+  }
+
+  if (kind === "sqlite") {
+    throw new ImportError(
+      `"${file.name}" is a SQLite database. SQLite import isn't supported yet (the DuckDB SQLite extension is unstable in this build) — export its tables to CSV or Parquet and import those instead.`,
+    );
+  }
+
+  if (kind === "parquet") {
+    if (!onBinaryFile) {
+      throw new ImportError(`"${file.name}" can't be imported here.`);
+    }
+    onPhase?.("importing");
+    return onBinaryFile(file, kind, buffer);
   }
 
   onPhase?.("parsing");

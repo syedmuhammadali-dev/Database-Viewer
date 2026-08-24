@@ -40,6 +40,17 @@ describe("sniffFileKind", () => {
     expect(sniffFileKind(utf8("a\tb\n1\t2"))).toBe("csv");
   });
 
+  it("detects SQLite databases by magic header", () => {
+    const header = utf8("SQLite format 3\0");
+    const bytes = new Uint8Array([...header, 4, 0, 1, 1]);
+    expect(sniffFileKind(bytes)).toBe("sqlite");
+  });
+
+  it("detects Parquet files by PAR1 magic", () => {
+    const bytes = new Uint8Array([0x50, 0x41, 0x52, 0x31, 1, 2, 3]);
+    expect(sniffFileKind(bytes)).toBe("parquet");
+  });
+
   it("rejects binary content with NUL bytes", () => {
     const bytes = new Uint8Array([0x00, 0x01, 0x00, 0x61, 0x00]);
     expect(sniffFileKind(bytes)).toBe("unknown");
@@ -88,6 +99,20 @@ describe("detectFileKind", () => {
     expect(detectFileKind(docx, await bytesOf(docx))).toBe("unknown");
     const pptx = file("deck.pptx", new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]));
     expect(detectFileKind(pptx, await bytesOf(pptx))).toBe("unknown");
+  });
+
+  it("detects a SQLite database via extension and magic header", async () => {
+    const header = utf8("SQLite format 3\0");
+    const db = file("app.sqlite", new Uint8Array([...header, 4, 0, 1, 1]));
+    expect(detectFileKind(db, await bytesOf(db))).toBe("sqlite");
+  });
+
+  it("detects a Parquet file via extension and magic bytes", async () => {
+    const parquet = file(
+      "table.parquet",
+      new Uint8Array([0x50, 0x41, 0x52, 0x31, 1, 2, 3]),
+    );
+    expect(detectFileKind(parquet, await bytesOf(parquet))).toBe("parquet");
   });
 
   it("still detects real Excel workbooks by ZIP magic", async () => {

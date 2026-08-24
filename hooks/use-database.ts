@@ -99,6 +99,19 @@ export function useDatabase() {
     [ensureReady],
   );
 
+  const importParquetFile = useCallback(
+    async (file: File, buffer: ArrayBuffer): Promise<TableInfo> => {
+      const db = await ensureReady();
+      const existing = (await db.listTables()).map((table) => table.name);
+      const baseName = file.name.replace(/\.[^.]+$/, "").trim() || "dataset";
+      const name = uniqueTableName(existing, baseName);
+      const info = await db.importParquetBuffer(name, buffer);
+      setTables(await db.listTables());
+      return info;
+    },
+    [ensureReady],
+  );
+
   const dropTable = useCallback(
     async (name: string) => {
       const db = await ensureReady();
@@ -167,6 +180,7 @@ export function useDatabase() {
     error,
     tables,
     importDataset,
+    importParquetFile,
     dropTable,
     clear,
     selectAll,

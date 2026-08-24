@@ -63,5 +63,9 @@ next-env.d.ts
 /public/duckdb/
 remainig-tasks.md
 
+# stray fixture files DuckDB-wasm's node test worker writes to real disk (tests/database.test.ts)
+/export.parquet
+/legacy.sqlite
+
 
 .vercel

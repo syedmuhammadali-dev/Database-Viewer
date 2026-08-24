@@ -10,6 +10,7 @@ import Dropzone from "./dropzone";
 import GoogleDriveLink from "./drive-link";
 import {
   importFileInto,
+  type BinaryImportKind,
   type ImportFileOutcome,
 } from "@/lib/importers";
 import type { ParsedDataset } from "@/lib/types";
@@ -18,6 +19,11 @@ import { isAbortError } from "@/lib/importers/read-file";
 
 type InlineImportProps = {
   onImported: (dataset: ParsedDataset) => void | Promise<void>;
+  onBinaryFile?: (
+    file: File,
+    kind: BinaryImportKind,
+    buffer: ArrayBuffer,
+  ) => Promise<ImportFileOutcome[]>;
   disabled?: boolean;
 };
 
@@ -30,6 +36,7 @@ type InlineItem = {
 
 export default function InlineImport({
   onImported,
+  onBinaryFile,
   disabled,
 }: InlineImportProps) {
   const [items, setItems] = useState<InlineItem[]>([]);
@@ -63,6 +70,8 @@ export default function InlineImport({
               files[i],
               onImported,
               controller.signal,
+              undefined,
+              onBinaryFile,
             );
             const detail = outcomes
               .map((outcome) => outcomeName(outcome))
@@ -90,7 +99,7 @@ export default function InlineImport({
         abortRef.current = null;
       }
     },
-    [running, disabled, onImported],
+    [running, disabled, onImported, onBinaryFile],
   );
 
   const handleDriveFile = useCallback(
@@ -116,9 +125,9 @@ export default function InlineImport({
           Import your data
         </h2>
         <p className="mt-1 text-sm leading-6 text-zinc-500">
-          Upload files or a folder, or paste a Google Drive link. Data is
-          processed in your browser and becomes a table in your temporary
-          database.
+          Upload files or a folder, or paste a Google Drive link. CSV, Excel,
+          JSON and Parquet are all detected automatically. Data is processed
+          in your browser and becomes a table in your temporary database.
         </p>
 
         <div className="mt-5 space-y-4">

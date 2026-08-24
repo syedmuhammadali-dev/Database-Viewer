@@ -10,6 +10,7 @@ import DrivePanel from "./drive/drive-panel";
 import CollectionExplorer from "./drive/collection-explorer";
 import ImportDialog from "@/components/import/import-dialog";
 import RowEditor from "@/components/table/row-editor";
+import type { BinaryImportKind, ImportFileOutcome } from "@/lib/importers";
 import type { DataRow, ParsedDataset, ViewMode } from "@/lib/types";
 import { ROW_ID_COLUMN } from "@/lib/database";
 import { useDatabase } from "@/hooks/use-database";
@@ -27,6 +28,7 @@ export default function Workspace() {
     error: engineError,
     tables,
     importDataset,
+    importParquetFile,
     clear,
     selectAll,
     runQuery,
@@ -95,6 +97,20 @@ export default function Workspace() {
       setViewMode("table");
     },
     [importDataset],
+  );
+
+  const handleBinaryImport = useCallback(
+    async (
+      file: File,
+      _kind: BinaryImportKind,
+      buffer: ArrayBuffer,
+    ): Promise<ImportFileOutcome[]> => {
+      const info = await importParquetFile(file, buffer);
+      setActiveTableName(info.name);
+      setViewMode("table");
+      return [{ name: info.name, rows: info.rowCount }];
+    },
+    [importParquetFile],
   );
 
   const handleClear = useCallback(async () => {
@@ -288,6 +304,7 @@ export default function Workspace() {
           onViewModeChange={setViewMode}
           runQuery={handleRunQuery}
           onImported={handleImported}
+          onBinaryFile={handleBinaryImport}
           onAddRow={handleAddRow}
           onEditRow={handleEditRow}
           onDeleteRow={(row) => void handleDeleteRow(row)}
@@ -321,6 +338,7 @@ export default function Workspace() {
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={handleImported}
+        onBinaryFile={handleBinaryImport}
       />
       {rowEditor && activeTable ? (
         <RowEditor

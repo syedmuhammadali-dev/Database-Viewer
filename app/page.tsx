@@ -59,8 +59,9 @@ export default function Home() {
         </h1>
 
         <p className="mt-6 max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
-          Upload CSV, Excel or JSON files, connect Google Drive or Google
-          Sheets, and explore your data with Table, JSON and SQL views. Sign
+          Upload CSV, Excel, JSON or Parquet files, connect Google Drive or
+          Google Sheets, and explore your data with Table, JSON and SQL
+          views. Sign
           in with Google and a Drive folder becomes a live database — edit it
           with SQL or a MongoDB-style API, powered by{" "}
           <a
@@ -116,6 +117,9 @@ export default function Home() {
             </li>
             <li>
               <span className="font-medium text-zinc-300">JSON</span> upload
+            </li>
+            <li>
+              <span className="font-medium text-zinc-300">Parquet</span> upload
             </li>
             <li>
               <span className="font-medium text-zinc-300">Google Drive</span>{" "}

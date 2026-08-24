@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { DataRow, ParsedDataset, TableInfo, ViewMode } from "@/lib/types";
 import type { QueryResult } from "@/lib/database";
+import type { BinaryImportKind, ImportFileOutcome } from "@/lib/importers";
 import DataTable from "@/components/table/data-table";
 import SqlConsole from "@/components/sql/sql-console";
 import InlineImport from "@/components/import/inline-import";
@@ -25,6 +26,11 @@ type MainAreaProps = {
   onViewModeChange: (mode: ViewMode) => void;
   runQuery: (sql: string) => Promise<QueryResult>;
   onImported: (dataset: ParsedDataset) => void | Promise<void>;
+  onBinaryFile?: (
+    file: File,
+    kind: BinaryImportKind,
+    buffer: ArrayBuffer,
+  ) => Promise<ImportFileOutcome[]>;
   onAddRow?: () => void;
   onEditRow?: (row: DataRow) => void;
   onDeleteRow?: (row: DataRow) => void;
@@ -41,6 +47,7 @@ export default function MainArea({
   onViewModeChange,
   runQuery,
   onImported,
+  onBinaryFile,
   onAddRow,
   onEditRow,
   onDeleteRow,
@@ -54,7 +61,7 @@ export default function MainArea({
         {viewMode === "sql" ? (
           <SqlConsole runQuery={runQuery} />
         ) : (
-          <InlineImport onImported={onImported} />
+          <InlineImport onImported={onImported} onBinaryFile={onBinaryFile} />
         )}
       </main>
     );

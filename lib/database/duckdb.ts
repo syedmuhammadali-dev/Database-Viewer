@@ -318,6 +318,30 @@ class DuckDatabase implements Database {
     );
   }
 
+  private static virtualFileName(extension: string): string {
+    return `import_${Date.now()}_${Math.random().toString(36).slice(2)}.${extension}`;
+  }
+
+  async importParquetBuffer(name: string, buffer: ArrayBuffer): Promise<TableInfo> {
+    const tableName = sanitizeTableName(name);
+    const virtualName = DuckDatabase.virtualFileName("parquet");
+    await this.instance.registerFileBuffer(virtualName, new Uint8Array(buffer));
+    try {
+      await this.run(
+        `CREATE TABLE ${quoteIdentifier(tableName)} AS SELECT * FROM read_parquet('${virtualName}')`,
+      );
+    } catch (error) {
+      throw new DatabaseError(
+        `Could not read this Parquet file: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    } finally {
+      await this.instance.dropFile(virtualName).catch(() => undefined);
+    }
+    return (await this.getTable(tableName))!;
+  }
+
   async dispose(): Promise<void> {
     if (this.connection) {
       await this.connection.close().catch(() => undefined);

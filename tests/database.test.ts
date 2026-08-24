@@ -159,4 +159,31 @@ describe("temporary duckdb database", () => {
     expect(afterDelete.rowCount).toBe(3);
     expect(afterDelete.rows.map((row) => row.name)).not.toContain("Rear");
   });
+
+  it("imports a Parquet file directly", async () => {
+    const duckdb = await import("@duckdb/duckdb-wasm");
+    const logger = new duckdb.VoidLogger();
+    const worker = await duckdb.createWorker(pathToFileURL(NODE_WORKER).href);
+    const fixture = new duckdb.AsyncDuckDB(logger, worker);
+    await fixture.instantiate(NODE_WASM, null);
+    let bytes: Uint8Array;
+    try {
+      const conn = await fixture.connect();
+      await conn.query(
+        "CREATE TABLE cities AS SELECT * FROM (VALUES ('Lahore', 11), ('Karachi', 16)) AS t(name, pop_millions)",
+      );
+      await conn.query("COPY cities TO 'export.parquet' (FORMAT PARQUET)");
+      await conn.close();
+      bytes = await fixture.copyFileToBuffer("export.parquet");
+    } finally {
+      await fixture.terminate();
+    }
+
+    const info = await db.importParquetBuffer("cities", bytes.buffer as ArrayBuffer);
+    expect(info.name).toBe("cities");
+    expect(info.rowCount).toBe(2);
+    const result = await db.selectAll("cities");
+    expect(result.rows.map((row) => row.name).sort()).toEqual(["Karachi", "Lahore"]);
+  }, 30000);
+
 }, 60000);

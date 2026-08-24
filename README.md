@@ -20,6 +20,23 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Supported file formats
+
+Detected automatically from file content (not just the extension), for a
+single file, multiple files, or a whole dropped/selected folder:
+
+- CSV / TSV
+- Excel (`.xlsx`, `.xls`), including multi-sheet workbooks
+- JSON
+- Parquet — read natively by DuckDB, no conversion step
+- Google Drive file links and Google Sheets links (public share links)
+
+`.docx`/`.pptx`/`.odt` are documents, not tabular data, so they're rejected
+with a clear message rather than misread. SQLite (`.db`/`.sqlite`) files are
+*detected* but import is currently disabled: DuckDB-wasm's SQLite extension
+crashed with a WASM-level error in testing on this bundled version — export
+SQLite tables to CSV/Parquet in the meantime.
+
 ## Google Drive as a database (gdrive-db)
 
 DataLens can treat a folder in your own Google Drive as a live database,

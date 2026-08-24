@@ -82,7 +82,7 @@ export default function Dropzone({ onFiles, disabled }: DropzoneProps) {
             Drag and drop files or a folder here
           </p>
           <p className="mt-1 text-xs text-zinc-500">
-            CSV, Excel and JSON are detected automatically
+            CSV, Excel, JSON and Parquet are detected automatically
           </p>
         </div>
       </div>
