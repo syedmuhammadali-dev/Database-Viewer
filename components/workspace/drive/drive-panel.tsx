@@ -173,7 +173,12 @@ export default function DrivePanel({
       )}
       {drive.error ? (
         <p className="mt-1.5 text-[11px] leading-4 text-amber-300">{drive.error}</p>
-      ) : null}
+      ) : (
+        <p className="mt-2 text-[11px] leading-4 text-zinc-600">
+          Edits sync on the cloud icon next to a linked table, or
+          automatically after a single-statement SQL INSERT/UPDATE/DELETE.
+        </p>
+      )}
     </div>
   );
 }

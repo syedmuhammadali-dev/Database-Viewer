@@ -130,4 +130,33 @@ describe("temporary duckdb database", () => {
   it("returns null for an unknown table", async () => {
     expect(await db.getTable("nope")).toBeNull();
   });
+
+  it("inserts, updates and deletes rows by rowid", async () => {
+    const withRowIds = await db.selectAll("people", { includeRowId: true });
+    expect(withRowIds.columns[0]).toBe("__rowid__");
+    const ada = withRowIds.rows.find((row) => row.name === "Ada")!;
+    const adaRowId = Number(ada.__rowid__);
+
+    await db.updateRow("people", adaRowId, { age: 37 });
+    const afterUpdate = await db.selectAll("people");
+    expect(afterUpdate.rows.find((row) => row.name === "Ada")?.age).toBe(37);
+
+    await db.insertRow("people", {
+      id: 4,
+      name: "Rear",
+      age: 30,
+      active: true,
+      note: "admiral",
+    });
+    const afterInsert = await db.selectAll("people");
+    expect(afterInsert.rowCount).toBe(4);
+    expect(afterInsert.rows.map((row) => row.name)).toContain("Rear");
+
+    const withRowIdsAfterInsert = await db.selectAll("people", { includeRowId: true });
+    const rear = withRowIdsAfterInsert.rows.find((row) => row.name === "Rear")!;
+    await db.deleteRow("people", Number(rear.__rowid__));
+    const afterDelete = await db.selectAll("people");
+    expect(afterDelete.rowCount).toBe(3);
+    expect(afterDelete.rows.map((row) => row.name)).not.toContain("Rear");
+  });
 }, 60000);

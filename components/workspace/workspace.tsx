@@ -9,12 +9,17 @@ import MainArea from "./main-area";
 import DrivePanel from "./drive/drive-panel";
 import CollectionExplorer from "./drive/collection-explorer";
 import ImportDialog from "@/components/import/import-dialog";
+import RowEditor from "@/components/table/row-editor";
 import type { DataRow, ParsedDataset, ViewMode } from "@/lib/types";
+import { ROW_ID_COLUMN } from "@/lib/database";
 import { useDatabase } from "@/hooks/use-database";
 import { useDriveDatabase, type DriveLink } from "@/hooks/use-drive-database";
+import { extractDmlTargetTable } from "@/lib/sql/dml";
 import { toUserMessage } from "@/lib/errors";
 
 const DRIVE_SYNC_LIMIT = 100_000;
+
+type RowEditorState = { mode: "add" } | { mode: "edit"; row: DataRow };
 
 export default function Workspace() {
   const {
@@ -25,6 +30,9 @@ export default function Workspace() {
     clear,
     selectAll,
     runQuery,
+    insertRow,
+    updateRow,
+    deleteRow,
     refreshTables,
   } = useDatabase();
   const drive = useDriveDatabase();
@@ -40,6 +48,9 @@ export default function Workspace() {
   const [busyCollection, setBusyCollection] = useState<string | null>(null);
   const [driveActionError, setDriveActionError] = useState<string | null>(null);
   const [explorerCollection, setExplorerCollection] = useState<string | null>(null);
+  const [rowEditor, setRowEditor] = useState<RowEditorState | null>(null);
+  const [rowEditorSaving, setRowEditorSaving] = useState(false);
+  const [rowEditorError, setRowEditorError] = useState<string | null>(null);
 
   const linkedTableNames = useMemo(() => new Set(Object.keys(driveLinks)), [driveLinks]);
   const linkedCollectionNames = useMemo(
@@ -64,7 +75,7 @@ export default function Workspace() {
       setRowsLoading(true);
       setRowsError(null);
       try {
-        const result = await selectAll(activeTableName);
+        const result = await selectAll(activeTableName, { includeRowId: true });
         if (!cancelled) setRows(result.rows);
       } catch (cause) {
         if (!cancelled) setRowsError(toUserMessage(cause));
@@ -95,18 +106,37 @@ export default function Workspace() {
     setDriveLinks({});
   }, [clear]);
 
+  const syncIfLinked = useCallback(
+    async (tableName: string) => {
+      const link = driveLinks[tableName];
+      if (!link) return;
+      setBusyTableName(tableName);
+      try {
+        const result = await selectAll(tableName, { limit: DRIVE_SYNC_LIMIT });
+        await drive.syncTableToDrive(link.collectionName, result.rows);
+      } catch (cause) {
+        setDriveActionError(toUserMessage(cause));
+      } finally {
+        setBusyTableName(null);
+      }
+    },
+    [drive, driveLinks, selectAll],
+  );
+
   const handleRunQuery = useCallback(
     async (sql: string) => {
       const result = await runQuery(sql);
       await refreshTables();
       if (activeTableName) {
-        selectAll(activeTableName)
+        selectAll(activeTableName, { includeRowId: true })
           .then((res) => setRows(res.rows))
           .catch(() => undefined);
       }
+      const target = extractDmlTargetTable(sql);
+      if (target && driveLinks[target]) void syncIfLinked(target);
       return result;
     },
-    [runQuery, refreshTables, activeTableName, selectAll],
+    [runQuery, refreshTables, activeTableName, selectAll, driveLinks, syncIfLinked],
   );
 
   const handleImportCollection = useCallback(
@@ -153,20 +183,67 @@ export default function Workspace() {
 
   const handleSyncTable = useCallback(
     async (tableName: string) => {
-      const link = driveLinks[tableName];
-      if (!link) return;
-      setBusyTableName(tableName);
       setDriveActionError(null);
+      await syncIfLinked(tableName);
+    },
+    [syncIfLinked],
+  );
+
+  const refreshActiveRows = useCallback(async () => {
+    if (!activeTableName) return;
+    const result = await selectAll(activeTableName, { includeRowId: true });
+    setRows(result.rows);
+  }, [activeTableName, selectAll]);
+
+  const handleAddRow = useCallback(() => {
+    setRowEditorError(null);
+    setRowEditor({ mode: "add" });
+  }, []);
+
+  const handleEditRow = useCallback((row: DataRow) => {
+    setRowEditorError(null);
+    setRowEditor({ mode: "edit", row });
+  }, []);
+
+  const handleDeleteRow = useCallback(
+    async (row: DataRow) => {
+      if (!activeTableName) return;
+      const rowid = Number(row[ROW_ID_COLUMN]);
+      if (!Number.isFinite(rowid)) return;
       try {
-        const result = await selectAll(tableName, { limit: DRIVE_SYNC_LIMIT });
-        await drive.syncTableToDrive(link.collectionName, result.rows);
+        await deleteRow(activeTableName, rowid);
+        await refreshActiveRows();
+        void syncIfLinked(activeTableName);
       } catch (cause) {
         setDriveActionError(toUserMessage(cause));
-      } finally {
-        setBusyTableName(null);
       }
     },
-    [drive, driveLinks, selectAll],
+    [activeTableName, deleteRow, refreshActiveRows, syncIfLinked],
+  );
+
+  const handleSaveRow = useCallback(
+    async (values: DataRow) => {
+      if (!activeTableName || !rowEditor) return;
+      setRowEditorSaving(true);
+      setRowEditorError(null);
+      try {
+        if (rowEditor.mode === "add") {
+          await insertRow(activeTableName, values);
+        } else {
+          const rowid = Number(rowEditor.row[ROW_ID_COLUMN]);
+          if (!Number.isFinite(rowid)) throw new Error("Missing row reference.");
+          await updateRow(activeTableName, rowid, values);
+        }
+        setRowEditor(null);
+        await refreshActiveRows();
+        void syncIfLinked(activeTableName);
+      } catch (cause) {
+        setRowEditorError(toUserMessage(cause));
+      } finally {
+        setRowEditorSaving(false);
+      }
+    },
+    [activeTableName, rowEditor, insertRow, updateRow, refreshActiveRows, syncIfLinked],
   );
 
   return (
@@ -211,6 +288,9 @@ export default function Workspace() {
           onViewModeChange={setViewMode}
           runQuery={handleRunQuery}
           onImported={handleImported}
+          onAddRow={handleAddRow}
+          onEditRow={handleEditRow}
+          onDeleteRow={(row) => void handleDeleteRow(row)}
         />
       </div>
       <div className="flex h-7 shrink-0 items-center border-t border-zinc-800 bg-zinc-900/60 px-3 text-[11px] text-zinc-500">
@@ -242,6 +322,17 @@ export default function Workspace() {
         onOpenChange={setImportOpen}
         onImported={handleImported}
       />
+      {rowEditor && activeTable ? (
+        <RowEditor
+          title={rowEditor.mode === "add" ? `Add row to ${activeTable.name}` : `Edit row in ${activeTable.name}`}
+          columns={activeTable.columns}
+          initialValues={rowEditor.mode === "edit" ? rowEditor.row : undefined}
+          saving={rowEditorSaving}
+          error={rowEditorError}
+          onSave={handleSaveRow}
+          onClose={() => setRowEditor(null)}
+        />
+      ) : null}
       {explorerCollection && drive.databaseName ? (
         <CollectionExplorer
           key={explorerCollection}

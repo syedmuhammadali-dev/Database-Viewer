@@ -251,6 +251,11 @@ export default function CollectionExplorer({ name, collection, onClose }: Collec
             <Plus className="h-3.5 w-3.5" aria-hidden />
             Insert
           </button>
+          <p className="mt-2 text-[11px] leading-4 text-zinc-600">
+            gdrive-db limits: equality-only filters (no $gt/$lt/$in), whole
+            collection loads on every call, and no transactions — concurrent
+            edits from two tabs can overwrite each other.
+          </p>
         </div>
       </div>
     </div>

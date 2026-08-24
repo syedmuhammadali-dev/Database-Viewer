@@ -6,6 +6,7 @@ import type {
   QueryResult,
   SqlType,
 } from "./types";
+import { ROW_ID_COLUMN } from "./types";
 import {
   coerceValue,
   inferTypes,
@@ -201,9 +202,12 @@ class DuckDatabase implements Database {
 
   async selectAll(
     name: string,
-    options: { limit?: number; offset?: number } = {},
+    options: { limit?: number; offset?: number; includeRowId?: boolean } = {},
   ): Promise<QueryResult> {
-    let sql = `SELECT * FROM ${quoteIdentifier(name)}`;
+    const select = options.includeRowId
+      ? `rowid AS ${quoteIdentifier(ROW_ID_COLUMN)}, *`
+      : "*";
+    let sql = `SELECT ${select} FROM ${quoteIdentifier(name)}`;
     const clauses: string[] = [];
     if (options.limit !== undefined && options.limit > 0) {
       clauses.push(`LIMIT ${Math.floor(options.limit)}`);
@@ -217,6 +221,101 @@ class DuckDatabase implements Database {
 
   async query(sql: string): Promise<QueryResult> {
     return this.run(sql);
+  }
+
+  private async columnTypes(name: string): Promise<Record<string, SqlType>> {
+    const result = await this.run(
+      `SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'main' AND table_name = '${name.replaceAll("'", "''")}' ORDER BY ordinal_position`,
+    );
+    const known: SqlType[] = ["INTEGER", "DOUBLE", "BOOLEAN", "VARCHAR"];
+    const types: Record<string, SqlType> = {};
+    for (const row of result.rows) {
+      const dataType = String(row.data_type);
+      const column = String(row.column_name);
+      types[column] = (known as string[]).includes(dataType)
+        ? (dataType as SqlType)
+        : "VARCHAR";
+    }
+    return types;
+  }
+
+  async insertRow(name: string, values: DataRow): Promise<void> {
+    const columns = Object.keys(values);
+    if (columns.length === 0) {
+      throw new DatabaseError("No columns to insert.");
+    }
+    const types = await this.columnTypes(name);
+    const conn = await this.conn();
+    const quotedColumns = columns.map(quoteIdentifier).join(", ");
+    const placeholders = columns.map(() => "?").join(", ");
+    const stmt = await conn
+      .prepare(
+        `INSERT INTO ${quoteIdentifier(name)} (${quotedColumns}) VALUES (${placeholders})`,
+      )
+      .catch((error: unknown) => {
+        throw new DatabaseError(
+          `Could not prepare insert for "${name}": ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
+    try {
+      const params = columns.map((column) =>
+        coerceValue(values[column], types[column] ?? "VARCHAR"),
+      );
+      await stmt.query(...params);
+    } catch (error) {
+      throw new DatabaseError(
+        `Could not insert row into "${name}": ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    } finally {
+      await stmt.close().catch(() => undefined);
+    }
+  }
+
+  async updateRow(name: string, rowid: number, values: DataRow): Promise<void> {
+    const columns = Object.keys(values);
+    if (columns.length === 0) return;
+    const types = await this.columnTypes(name);
+    const conn = await this.conn();
+    const setClause = columns
+      .map((column) => `${quoteIdentifier(column)} = ?`)
+      .join(", ");
+    const stmt = await conn
+      .prepare(`UPDATE ${quoteIdentifier(name)} SET ${setClause} WHERE rowid = ?`)
+      .catch((error: unknown) => {
+        throw new DatabaseError(
+          `Could not prepare update for "${name}": ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
+    try {
+      const params = [
+        ...columns.map((column) => coerceValue(values[column], types[column] ?? "VARCHAR")),
+        rowid,
+      ];
+      await stmt.query(...params);
+    } catch (error) {
+      throw new DatabaseError(
+        `Could not update row in "${name}": ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    } finally {
+      await stmt.close().catch(() => undefined);
+    }
+  }
+
+  async deleteRow(name: string, rowid: number): Promise<void> {
+    if (!Number.isFinite(rowid)) {
+      throw new DatabaseError("Invalid row reference.");
+    }
+    await this.run(
+      `DELETE FROM ${quoteIdentifier(name)} WHERE rowid = ${Math.trunc(rowid)}`,
+    );
   }
 
   async dispose(): Promise<void> {

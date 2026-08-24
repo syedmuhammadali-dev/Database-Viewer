@@ -22,7 +22,10 @@ import {
   ArrowUp,
   ArrowUpDown,
   Check,
+  Pencil,
+  Plus,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import type { DataRow } from "@/lib/types";
@@ -45,6 +48,10 @@ const features = tableFeatures({
 type DataTableProps = {
   rows: DataRow[];
   columns: string[];
+  editable?: boolean;
+  onAddRow?: () => void;
+  onEditRow?: (row: DataRow) => void;
+  onDeleteRow?: (row: DataRow) => void;
 };
 
 function formatCell(value: unknown): string {
@@ -60,7 +67,14 @@ function CellValue({ value }: { value: unknown }) {
   return <span>{formatCell(value)}</span>;
 }
 
-export default function DataTable({ rows, columns }: DataTableProps) {
+export default function DataTable({
+  rows,
+  columns,
+  editable,
+  onAddRow,
+  onEditRow,
+  onDeleteRow,
+}: DataTableProps) {
   const helper = useMemo(
     () => createColumnHelper<typeof features, DataRow>(),
     [],
@@ -124,6 +138,16 @@ export default function DataTable({ rows, columns }: DataTableProps) {
           {filteredCount.toLocaleString()} / {totalCount.toLocaleString()}
         </span>
         <ColumnVisibility table={table} />
+        {editable && onAddRow ? (
+          <button
+            type="button"
+            onClick={onAddRow}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-500 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-400"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Add row
+          </button>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -174,6 +198,11 @@ export default function DataTable({ rows, columns }: DataTableProps) {
                     </th>
                   );
                 })}
+                {editable && (onEditRow || onDeleteRow) ? (
+                  <th className="border-b border-zinc-800 bg-zinc-900 px-3 py-1.5 text-right text-xs font-medium text-zinc-400">
+                    Actions
+                  </th>
+                ) : null}
               </tr>
             ))}
           </thead>
@@ -181,7 +210,7 @@ export default function DataTable({ rows, columns }: DataTableProps) {
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={columns.length + (editable ? 1 : 0)}
                   className="px-4 py-10 text-center text-sm text-zinc-500"
                 >
                   No rows match the current search or filters.
@@ -201,6 +230,32 @@ export default function DataTable({ rows, columns }: DataTableProps) {
                       <table.FlexRender cell={cell} />
                     </td>
                   ))}
+                  {editable && (onEditRow || onDeleteRow) ? (
+                    <td className="px-3 py-1.5 text-right align-middle">
+                      <div className="inline-flex items-center gap-1">
+                        {onEditRow ? (
+                          <button
+                            type="button"
+                            title="Edit row"
+                            onClick={() => onEditRow(row.original)}
+                            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                          >
+                            <Pencil className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        ) : null}
+                        {onDeleteRow ? (
+                          <button
+                            type="button"
+                            title="Delete row"
+                            onClick={() => onDeleteRow(row.original)}
+                            className="rounded p-1 text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
               ))
             )}

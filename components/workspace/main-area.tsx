@@ -25,6 +25,9 @@ type MainAreaProps = {
   onViewModeChange: (mode: ViewMode) => void;
   runQuery: (sql: string) => Promise<QueryResult>;
   onImported: (dataset: ParsedDataset) => void | Promise<void>;
+  onAddRow?: () => void;
+  onEditRow?: (row: DataRow) => void;
+  onDeleteRow?: (row: DataRow) => void;
 };
 
 export default function MainArea({
@@ -38,6 +41,9 @@ export default function MainArea({
   onViewModeChange,
   runQuery,
   onImported,
+  onAddRow,
+  onEditRow,
+  onDeleteRow,
 }: MainAreaProps) {
   const hasData = tables.length > 0;
 
@@ -91,6 +97,9 @@ export default function MainArea({
             rows={rows}
             rowsLoading={rowsLoading}
             rowsError={rowsError}
+            onAddRow={onAddRow}
+            onEditRow={onEditRow}
+            onDeleteRow={onDeleteRow}
           />
         </div>
       )}
@@ -104,12 +113,18 @@ function Pane({
   rows,
   rowsLoading,
   rowsError,
+  onAddRow,
+  onEditRow,
+  onDeleteRow,
 }: {
   viewMode: ViewMode;
   columns: string[];
   rows: DataRow[];
   rowsLoading: boolean;
   rowsError: string | null;
+  onAddRow?: () => void;
+  onEditRow?: (row: DataRow) => void;
+  onDeleteRow?: (row: DataRow) => void;
 }) {
   if (rowsLoading) {
     return (
@@ -130,7 +145,16 @@ function Pane({
   }
 
   if (viewMode === "table") {
-    return <DataTable columns={columns} rows={rows} />;
+    return (
+      <DataTable
+        columns={columns}
+        rows={rows}
+        editable
+        onAddRow={onAddRow}
+        onEditRow={onEditRow}
+        onDeleteRow={onDeleteRow}
+      />
+    );
   }
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-zinc-500">

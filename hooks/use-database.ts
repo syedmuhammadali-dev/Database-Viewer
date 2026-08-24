@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { instantiateBrowserDatabase } from "@/lib/database";
 import type { Database, QueryResult } from "@/lib/database";
-import type { ParsedDataset, TableInfo } from "@/lib/types";
+import type { DataRow, ParsedDataset, TableInfo } from "@/lib/types";
 import { uniqueTableName } from "@/lib/importers";
 import { DatabaseError } from "@/lib/errors";
 
@@ -120,7 +120,7 @@ export function useDatabase() {
   const selectAll = useCallback(
     async (
       name: string,
-      options?: { limit?: number; offset?: number },
+      options?: { limit?: number; offset?: number; includeRowId?: boolean },
     ): Promise<QueryResult> => {
       const db = await ensureReady();
       return db.selectAll(name, options);
@@ -136,6 +136,32 @@ export function useDatabase() {
     [ensureReady],
   );
 
+  const insertRow = useCallback(
+    async (name: string, values: DataRow) => {
+      const db = await ensureReady();
+      await db.insertRow(name, values);
+      setTables(await db.listTables());
+    },
+    [ensureReady],
+  );
+
+  const updateRow = useCallback(
+    async (name: string, rowid: number, values: DataRow) => {
+      const db = await ensureReady();
+      await db.updateRow(name, rowid, values);
+    },
+    [ensureReady],
+  );
+
+  const deleteRow = useCallback(
+    async (name: string, rowid: number) => {
+      const db = await ensureReady();
+      await db.deleteRow(name, rowid);
+      setTables(await db.listTables());
+    },
+    [ensureReady],
+  );
+
   return {
     ready,
     error,
@@ -145,6 +171,9 @@ export function useDatabase() {
     clear,
     selectAll,
     runQuery,
+    insertRow,
+    updateRow,
+    deleteRow,
     refreshTables,
   };
 }
